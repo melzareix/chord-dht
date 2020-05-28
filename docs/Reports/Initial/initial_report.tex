@@ -1,0 +1,57 @@
+\documentclass[a4paper,12pt]{extarticle}
+\usepackage[margin=0.6in]{geometry}
+
+\title{P2P Systeme und Sicherheit (IN2194): Initial Project Report}
+\author{Mohamed Elzarei, Hady Mohamed}
+\date{\today} 
+
+\begin{document}
+
+\maketitle
+
+\section{Team}
+\begin{itemize}
+    \item Team Number: \textbf{15}
+    \item Team Name: \textbf{GitRekt}
+    \item Team Members:
+    \begin{enumerate}
+        \item \textbf{Mohamed Elzarei: 03722264}
+        \item \textbf{Hady Mohamed: 03722797}
+    \end{enumerate}
+\end{itemize}
+\section{Tech Stack}
+\begin{itemize}
+    \item \textbf{Python3} \footnote{https://www.python.org/} as programming language of choice. We chose python because we are comfortable using it, vast amount of libraries available for Python, should save us a lot of time and allow us to better focus on higher level programming instead of ”reinventing the wheel”. Also the portability of Python code to other platforms favored python compared to other languages.
+    
+    \item \textbf{Unix} Based Operating Systems. The decision was made so each developer (Hady uses Ubuntu, Mohamed uses macOS) can easily work with what they have and what they are comfortable with efficiently.
+    
+    \item \textbf{Docker} \footnote{https://www.docker.com/} for consistent development and distribution of the application.
+\end{itemize}
+\section{Build System}
+ \begin{itemize}
+     \item \textbf{Poetry} \footnote{https://python-poetry.org/} a modern tool for dependency management and packaging in Python.
+     
+     \item \textbf{Docker} containers for cross-platform builds that we can execute on any machine that has the Docker runtime installed.
+ \end{itemize}
+
+\section{Quality Assurance}
+    \subsection{Test Cases}
+        We will be writing automated test cases (unit tests), to assure the code does what it is expected to do. \textbf{pytest} \footnote{https://docs.pytest.org/en/latest/} will be our testing framework of choice, as it provides an easy way to define our test cases and how our should be executed.
+    \subsection{Quality Control}
+        To ensure code quality, we will be using \textbf{flake8} \footnote{https://flake8.pycqa.org/en/latest/}. This should enforce clean code format even with developers having different coding styles, thus making the look more readable and clean by making sure for example that there are no unused variable or import (and much more).
+\section{Dependencies}
+Python’s standard library (stdlib) is very extensive, offering a wide range of facilities and we try to use modules only from it as much as possible without external dependencies. \par At this stage of the project it's hard to determine all the required dependencies but to name a few libraries for development based on our previous experiences:
+\begin{itemize}
+    \item \textbf{Sphinx} \footnote{https://www.sphinx-doc.org/en/master/} for generating beautiful documentation.
+    \item \textbf{Black} \footnote{https://black.readthedocs.io/en/stable/} for unified code style and formatting.
+    \item \textbf{NumPy} \footnote{https://numpy.org/} for fast and vectorized array manipulation.
+\end{itemize}
+\section{License}
+MIT License\footnote{https://choosealicense.com/licenses/mit/}.  The MIT License is short and to the point. It lets people do almost anything they want with the project, like making and distributing closed source versions. 
+\section{Relevant Experience}
+We both (Mohamed \& Hady) took TUM Distributed Systems course (IN2259)\footnote{https://campus.tum.de/tumonline/WBMODHB.wbShowMHBReadOnly?pKnotenNr=756837}, developed a P2P chat application during our Bachelor degree, and have 2 Years of software development experience and currently employed as software working students.
+
+\section{Workload Distribution}
+We plan to distribute the workload but slicing the project into several modules and assigning each to module to one of us, the exact distribution to be decided when we start the planning and implementation phase.
+
+\end{document}
