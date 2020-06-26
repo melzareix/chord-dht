@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "tum-p2p-dht"
+version = "1.0.0"
+description = ""
+authors = ["Mohamed Elzarei", "Hady Yasser"]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+loguru = "^0.5.1"
+
+[tool.poetry.dev-dependencies]
+black = "^19.10b0"
+pytest = "^5.4.3"
+flake8 = "^3.8.3"
