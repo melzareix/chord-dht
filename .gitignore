@@ -117,6 +117,5 @@ dmypy.json
 
 # Intellij
 .idea
-
 chord_data
-/documentation/*/
+documentation/*/
