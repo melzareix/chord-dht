@@ -50,7 +50,6 @@ async def _start(args: argparse.Namespace):
     # SSL
     tls_dir = os.environ.get("TLS_DIR", "node_1")
     certs_dir = os.path.join(os.path.dirname(__file__), f"./tls/{tls_dir}")
-    print(certs_dir)
     server_ctx = aiomas.util.make_ssl_server_context(
         cafile=os.path.join(certs_dir, "ca.pem"),
         certfile=os.path.join(certs_dir, "node.pem"),

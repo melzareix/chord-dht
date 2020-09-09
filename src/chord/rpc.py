@@ -54,7 +54,6 @@ async def rpc_notify(succ_addr: str, my_addr: str, ssl_ctx: ssl.SSLContext) -> N
         await rpc_con.close()
     except Exception as e:
         logger.debug(e)
-        print(1)
 
 
 async def rpc_get_key(next_node: dict, key: str, ttl: int, ssl_ctx: ssl.SSLContext) -> Optional[str]:

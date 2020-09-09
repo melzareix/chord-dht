@@ -219,7 +219,6 @@ class Node:
                             inclusive_left=False,
                         ):
                             self._fingers[i] = succ
-                    # print(f"fixed {i} via {self._next}")
             # print_table(self._fingers)
 
     @aiomas.expose
