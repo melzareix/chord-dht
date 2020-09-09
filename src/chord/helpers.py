@@ -26,10 +26,11 @@ def gen_finger(addr: str):
     Generate an entry in the finger table.
     """
     _id = generate_id(addr.encode("utf-8"))
+    ring_sz = 2 ** (int(dht_config["finger_table_sz"]))
     return {
         "addr": addr,
         "id": _id,
-        "numeric_id": int(_id, 16)
+        "numeric_id": int(_id, 16) % ring_sz
     }
 
 

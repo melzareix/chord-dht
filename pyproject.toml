@@ -12,6 +12,10 @@ nest_asyncio = "^1.4.0"
 grpcio = "^1.31.0"
 simplekv = "^0.14.1"
 bitarray = "^1.5.3"
+diskcache = "^5.0.2"
+blosc = "^1.9.1"
+falcon = "^2.0.0"
+msgpack = "^1.0.0"
 
 [tool.poetry.dev-dependencies]
 black = "^19.10b0"

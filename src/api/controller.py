@@ -18,7 +18,7 @@ class ApiController(asyncio.Protocol):
         logger.debug(f"API Result: {result}")
         if not result:
             return self.close_connection()
-        if not isinstance(result, bytes):
+        if isinstance(result, str):
             result = result.encode("utf-8")
         self.transport.write(result)
 

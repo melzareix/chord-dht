@@ -1,4 +1,5 @@
 import struct
+from binascii import unhexlify
 from enum import Enum
 
 from loguru import logger
@@ -50,16 +51,16 @@ class ApiService:
         val = await self.chord_node.find_key(key.hex())
         if not val:
             return self._create_fail(key)
-        return self._create_succ(key, val.encode("utf-8"))
+        return self._create_succ(key, unhexlify(val))
 
     async def _process_put(self, data: bytes):
         ttl, replication, _ = struct.unpack(">HBB", data[:4])
-        print(len(data), data)
-        key = data[4:36]
-        value = data[36:].decode()  # TODO:: error handling
+        key = data[4:36].hex()
+        value = data[36:].hex()  # TODO:: error handling
+        # value = data[36:]  # TODO:: error handling
         print(ttl, replication, key, len(key), value, len(value))
-        res = await self.chord_node.put_key(key.hex(), value)
-        return res
+        res = await self.chord_node.put_key(key, value, int(ttl))
+        return key
 
     @staticmethod
     def _create_fail(key):

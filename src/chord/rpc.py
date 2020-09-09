@@ -15,36 +15,19 @@ async def rpc_ask_for_succ(next_node: dict, numeric_id: int) -> (bool, Optional[
         host, port = next_node["addr"].split(":")
         rpc_con = await aiomas.rpc.open_connection((host, port))
         found, rep = await rpc_con.remote.find_successor(numeric_id)
-        print(found, rep)
         await rpc_con.close()
         return found, rep
     except Exception as e:
-        logger.error(e)
+        logger.error(e, next_node, numeric_id)
         return False, None
 
 
-# async def rpc_ask_for_pred(addr: str) -> Optional[dict]:
-#     try:
-#         host, port = addr.split(":")
-#         rpc_con = await aiomas.rpc.open_connection((host, port))
-#         rep = await rpc_con.remote.get_predecessor()
-#         await rpc_con.close()
-#         return rep
-#     except Exception as e:
-#         logger.error(e)
-#         return None
-#
-
-async def rpc_ask_for_pred_and_succlist(addr: str) -> (Optional[dict], List):
-    try:
-        host, port = addr.split(":")
-        rpc_con = await aiomas.rpc.open_connection((host, port))
-        rep = await rpc_con.remote.get_pred_and_succlist()
-        await rpc_con.close()
-        return rep
-    except Exception as e:
-        logger.error(e)
-        return None, []
+async def rpc_ask_for_pred_and_succlist(addr: str) -> (dict, List):
+    host, port = addr.split(":")
+    rpc_con = await aiomas.rpc.open_connection((host, port))
+    rep = await rpc_con.remote.get_pred_and_succlist()
+    await rpc_con.close()
+    return rep
 
 
 async def rpc_ping(addr: str) -> bool:
@@ -82,11 +65,11 @@ async def rpc_get_key(next_node: dict, key: str, ttl: int) -> Optional[str]:
         return None
 
 
-async def rpc_save_key(next_node: dict, key: str, value: str) -> Optional[str]:
+async def rpc_save_key(next_node: dict, key: str, value: str, ttl: int) -> Optional[str]:
     try:
         host, port = next_node["addr"].split(":")
         rpc_con = await aiomas.rpc.open_connection((host, port))
-        rep = await rpc_con.remote.save_key(key, value)
+        rep = await rpc_con.remote.save_key(key, value, ttl)
         await rpc_con.close()
         return rep
     except Exception as e:

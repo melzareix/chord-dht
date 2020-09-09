@@ -1,5 +1,5 @@
+import argparse
 import asyncio
-import sys
 
 import aiomas
 import nest_asyncio
@@ -18,50 +18,63 @@ async def _start_api_server(host: str, port: str, chord_node: Node):
     return server
 
 
-async def _start_chord():
-    chord_node = Node(host="localhost", port=sys.argv[1])
-    if len(sys.argv) >= 3:
-        await chord_node.join(bootstrap_node=f"localhost:{sys.argv[2]}")
+async def _start_chord_node(args):
+    if args.dht_address:
+        dht_address = args.dht_address
     else:
-        await chord_node.join(bootstrap_node=None)
-    chord_node.dump_me()
+        dht_address = dht_config["listen_address"]
 
-    chord_rpc_server = aiomas.run(
-        until=aiomas.rpc.start_server(
-            ("localhost", int(sys.argv[1])),
-            chord_node,
-        )
-    )
-    logger.info(f"Chord RPC Server start at: localhost:{sys.argv[1]}")
-    return chord_rpc_server, chord_node
+    host, port = dht_address.split(":")
+    return host, int(port), Node(host=host, port=port)
 
 
-async def _start():
-    api_address = dht_config["api_address"]
-
-    api_host = api_address.split(":")[0]
-    api_port = int(api_address.split(":")[1]) + int(sys.argv[3] if len(sys.argv) > 2 else 0)
-
+async def _start(args: argparse.Namespace):
     nest_asyncio.apply()
-    rpc_server, chord_node = await _start_chord()
-    api_server = await _start_api_server(api_host, str(api_port), chord_node)
 
+    dht_host, dht_port, chord_node = await _start_chord_node(args)
     loop = asyncio.get_event_loop()
+
     stabilize_task = loop.create_task(chord_node.stabilize())
     fix_fingers_task = loop.create_task(chord_node.fix_fingers())
+    check_pred_task = loop.create_task(chord_node.check_predecessor())
 
-    async with api_server, rpc_server:
-        await asyncio.gather(api_server.serve_forever(), rpc_server.wait_closed(),
-                             loop.run_until_complete(stabilize_task), loop.run_until_complete(fix_fingers_task))
+    if args.bootstrap_node:
+        await chord_node.join(bootstrap_node=args.bootstrap_node)
+    else:
+        await chord_node.join(bootstrap_node=None)
 
+    chord_rpc_server = await aiomas.rpc.start_server(
+        (dht_host, dht_port),
+        chord_node,
+    )
+    logger.info(f"Chord RPC Server start at: {dht_host}:{dht_port}")
 
-async def _test_api_only():
-    api_address = dht_config["api_address"]
-    api_host = api_address.split(":")[0]
-    api_port = int(api_address.split(":")[1]) + int(sys.argv[3] if len(sys.argv) > 2 else 0)
-    api_server = await _start_api_server(api_host, api_port, None)
+    if args.start_api:
+        if not args.api_address:
+            api_address = dht_config["api_address"]
+        else:
+            api_address = args.api_address
+        api_host = api_address.split(":")[0]
+        api_port = int(api_address.split(":")[1])
+        api_server = await _start_api_server(api_host, str(api_port), chord_node)
+        async with api_server, chord_rpc_server:
+            await asyncio.gather(api_server.serve_forever(), loop.run_until_complete(chord_rpc_server.wait_closed()),
+                                 loop.run_until_complete(stabilize_task), loop.run_until_complete(fix_fingers_task),
+                                 loop.run_until_complete(check_pred_task))
+    else:
+        async with chord_rpc_server:
+            await asyncio.gather(loop.run_until_complete(chord_rpc_server.wait_closed()),
+                                 loop.run_until_complete(stabilize_task), loop.run_until_complete(fix_fingers_task),
+                                 loop.run_until_complete(check_pred_task))
 
 
 if __name__ == "__main__":
-    asyncio.run(_start())
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--start-api", help="If not present won't start an API server.", action="store_true",
+                        default=False)
+    parser.add_argument("--dht-address", help="Address to run the DHT Node on")
+    parser.add_argument("--api-address", help="Address to run the DHT Node on", default=None)
+    parser.add_argument("--bootstrap-node", help="Start a new Chord Ring if argument no present", default=None)
+    arguments = parser.parse_args()
+    asyncio.run(_start(arguments))
     # asyncio.run(_test_api_only())

@@ -18,7 +18,7 @@ def test_api_put_key(val):
     s.connect(('127.0.0.1', 36979))
     value = val.encode("utf-8")
     length = 8 + len(key) + len(value)
-    s.send(struct.pack(">HHHBB", length, 650, 0, 0, 0) + key + value)
+    s.send(struct.pack(">HHHBB", length, 650, 3600, 0, 0) + key + value)
     res = s.recv(1024)
     print("Result:", res)
     s.close()

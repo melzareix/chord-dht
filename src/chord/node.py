@@ -12,7 +12,9 @@ class Node:
     def __init__(self, host: str, port: str):
         self._addr = f"{host}:{port}"
         self._id = generate_id(self._addr.encode("utf-8"))
-        self._numeric_id = int(self._id, 16)
+
+        ring_sz = 2 ** (int(dht_config["finger_table_sz"]))
+        self._numeric_id = int(self._id, 16) % ring_sz
 
         self._MAX_STEPS = int(dht_config['max_steps'])
         self._MAX_SUCC = int(dht_config['max_succ'])
@@ -57,9 +59,10 @@ class Node:
             if self._successor is None:
                 _, self._successor = await rpc_ask_for_succ(gen_finger(bootstrap_node), self._numeric_id)
                 self._init_empty_fingers()
-                print_table(self._fingers)
             else:
                 raise Exception("Attempting to join after joining before.")
+
+        self.dump_me()
 
     def _create(self):
         self._predecessor = None
@@ -73,14 +76,16 @@ class Node:
         for i in range(len(self._fingers) - 1, -1, -1):
             if self._fingers[i]["numeric_id"] != -1:
                 if between(self._fingers[i]["numeric_id"], self._numeric_id, numeric_id, inclusive_left=False,
-                           inclusive_right=True):
-                    # logger.info(f"Using finger {i} => {self._fingers[i]}")
-                    return self._fingers
+                           inclusive_right=False):
+                    logger.info(
+                        f"Using finger {i} => {self._fingers[i]} {numeric_id} is between ({self._fingers[i]['numeric_id']},{self._numeric_id}]")
+                    return self._fingers[i]
         return self._successor
 
     def _find_successor(self, _numeric_id: int):
-        is_bet = between(_numeric_id, self._numeric_id, self._successor["numeric_id"], inclusive_right=True)
-        # logger.debug(f"Finding succ for: {_numeric_id} using node {self._numeric_id}: {is_bet}")
+        is_bet = between(_numeric_id, self._numeric_id, self._successor["numeric_id"], inclusive_left=False,
+                         inclusive_right=True)
+        logger.debug(f"Finding succ for: {_numeric_id} using node {self._numeric_id}: {is_bet}")
         if is_bet:
             return True, self._successor
         return False, self._closest_preceding_node(_numeric_id)
@@ -101,9 +106,13 @@ class Node:
     ##################################
 
     async def check_predecessor(self):
-        res = await rpc_ping()
-        if not res:
-            self._predecessor = None
+        _fix_interval = int(dht_config['fix_interval'])
+        while True:
+            await asyncio.sleep(_fix_interval)
+            if self._predecessor:
+                res = await rpc_ping(self._predecessor["addr"])
+                if not res:
+                    self._predecessor = None
 
     @aiomas.expose
     def get_pred_and_succlist(self):
@@ -112,21 +121,39 @@ class Node:
     async def stabilize(self):
         # if succ not yet set don't run stabilize
         _fix_interval = int(dht_config['fix_interval'])
+        print_interval = 60
+        time_since_last_print = print_interval
         while True:
             await asyncio.sleep(_fix_interval)
             if not self._successor:
                 continue
             # logger.info("Stabilizing the network")
-            pred, succ_list = await rpc_ask_for_pred_and_succlist(self._successor["addr"])
-            if pred is not None:
-                if between(pred["numeric_id"], self._numeric_id, self._successor["numeric_id"], inclusive_right=False,
-                           inclusive_left=False):
-                    self._successor = pred.copy()
-                    self._fingers[0] = self._successor
-            self._successors = [self._successor] + succ_list[1:]
-            await rpc_notify(self._successor["addr"], self._addr)
+            try:
+                pred, succ_list = await rpc_ask_for_pred_and_succlist(self._successor["addr"])
+                if pred is not None:
+                    if between(pred["numeric_id"], self._numeric_id, self._successor["numeric_id"],
+                               inclusive_right=False,
+                               inclusive_left=False):
+                        self._successor = pred.copy()
+                        self._fingers[0] = self._successor
+                self._successors = [self._successor] + succ_list[:-1]
+                await rpc_notify(self._successor["addr"], self._addr)
+            except Exception as e:
+                logger.error(e)
+                logger.error("Succ is no longer working switch to next succ.")
+                logger.info(self._successor)
+                self._successors = self._successors[1:]
+                if len(self._successors) == 0:
+                    self._successors.append(gen_finger(self._addr))
+                    self._successor = self._successors[0].copy()
+                else:
+                    self._successor = self._successors[0].copy()
+
             # logger.debug("Dumping after stabilizing the network...")
-            # self.dump_me()
+            time_since_last_print -= _fix_interval
+            if time_since_last_print <= 0:
+                time_since_last_print = print_interval
+                self.dump_me()
             # logger.info(f"Sleeping for {SECS_TO_WAIT} secs before stabilizing again")
 
     async def fix_fingers(self):
@@ -143,12 +170,12 @@ class Node:
                 if self._fingers[self._next] != succ:
                     # logger.info(f"Finger {self._next} updated from {self._fingers[self._next]['addr']} to {succ}.")
                     self._fingers[self._next] = succ
-                    # TODO: optimization need to check for correctness
-                    for i in range(self._next + 1, len(self._fingers)):
-                        __id = (self._numeric_id + (2 ** i)) % (2 ** len(self._fingers))
-                        if between(__id, self._numeric_id, succ["numeric_id"], inclusive_right=True):
-                            self._fingers[i] = succ
-                            # print(f"fixed {i} via {self._next}")
+                    # # TODO: optimization need to check for correctness
+                    # for i in range(self._next + 1, len(self._fingers)):
+                    #     __id = (self._numeric_id + (2 ** i)) % (2 ** len(self._fingers))
+                    #     if between(__id, self._numeric_id, succ["numeric_id"], inclusive_right=True):
+                    #         self._fingers[i] = succ
+                    # print(f"fixed {i} via {self._next}")
             # print_table(self._fingers)
 
     @aiomas.expose
@@ -158,12 +185,12 @@ class Node:
             self._predecessor = n
 
     @aiomas.expose
-    def save_key(self, key: str, value: str):
+    def save_key(self, key: str, value: str, ttl: int):
         logger.info(f"Saving key {key} => {value} in my storage.")
-        return self._storage.put_key(key, value)
+        return self._storage.put_key(key, value, ttl=ttl)
 
     @aiomas.expose
-    async def put_key(self, key: str, value: str):
+    async def put_key(self, key: str, value: str, ttl: int):
         dht_key = generate_id(key)
         numeric_id = int(dht_key, 16)
         logger.warning(f"Putting Key: {key} - {dht_key} - {numeric_id}")
@@ -171,11 +198,11 @@ class Node:
         if not found:
             return None
         logger.info(f"putting key {dht_key} on node {next_node['addr']}")
-        return await rpc_save_key(next_node, dht_key, value)
+        return await rpc_save_key(next_node, dht_key, value, ttl)
 
     @aiomas.expose
     async def find_key(self, key: str, ttl: int = 4):
-        logger.debug(f"Finding key TTL {ttl} {key}")
+        logger.debug(f"Finding key with TTL => {ttl} {key}")
         if ttl <= 0:
             return None
         dht_key = generate_id(key)
@@ -199,13 +226,23 @@ class Node:
         return False, None
 
     @staticmethod
+    @aiomas.expose
     def ping():
         return "pong"
 
     def dump_me(self):
-        logger.debug("My data & Fingers")
-        print_table([{
+        logger.debug("My data, succ and pred")
+        my_data = [{
             "addr": self._addr,
             "id": self._id,
             "numeric_id": self._numeric_id
-        }, self._successor, self._predecessor])
+        }]
+        my_data += [self._successor]
+        my_data += [self._predecessor]
+        print_table(my_data)
+
+        logger.debug("My Successors")
+        print_table(self._successors)
+
+        logger.debug("My Fingers")
+        print_table(self._fingers)
