@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import os
 
 import aiomas
 import nest_asyncio
@@ -43,9 +44,16 @@ async def _start(args: argparse.Namespace):
     else:
         await chord_node.join(bootstrap_node=None)
 
+    # TLS
+    certs_dir = os.path.join(os.path.dirname(__file__), './tls/node')
+    server_ctx = aiomas.util.make_ssl_server_context(cafile=os.path.join(certs_dir, 'ca.pem'),
+                                                     certfile=os.path.join(certs_dir, 'node.pem'),
+                                                     keyfile=os.path.join(certs_dir, 'node.key'))
+
     chord_rpc_server = await aiomas.rpc.start_server(
         (dht_host, dht_port),
         chord_node,
+        ssl=server_ctx
     )
     logger.info(f"Chord RPC Server start at: {dht_host}:{dht_port}")
 
@@ -77,4 +85,3 @@ if __name__ == "__main__":
     parser.add_argument("--bootstrap-node", help="Start a new Chord Ring if argument no present", default=None)
     arguments = parser.parse_args()
     asyncio.run(_start(arguments))
-    # asyncio.run(_test_api_only())

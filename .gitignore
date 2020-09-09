@@ -118,4 +118,4 @@ dmypy.json
 # Intellij
 .idea
 
-.chord_data
+chord_data

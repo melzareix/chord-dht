@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 from chord.helpers import generate_id, between, print_table
 from chord.rpc import *
@@ -30,7 +31,14 @@ class Node:
         self._successors = [None for _ in range(self._MAX_SUCC)]
         self._next = 0
 
-    ##################################
+        # SSL
+        certs_dir = os.path.join(os.path.dirname(__file__), '../tls/node')
+        self.client_ssl_ctx = aiomas.util.make_ssl_client_context(cafile=os.path.join(certs_dir, 'ca.pem'),
+                                                                  certfile=os.path.join(certs_dir, 'node.pem'),
+                                                                  keyfile=os.path.join(certs_dir, 'node.key'))
+        self.client_ssl_ctx.check_hostname = False
+        ##################################
+
     # Node Initialization(s)
     ##################################
 
@@ -57,7 +65,8 @@ class Node:
             self._create()
         else:
             if self._successor is None:
-                _, self._successor = await rpc_ask_for_succ(gen_finger(bootstrap_node), self._numeric_id)
+                _, self._successor = await rpc_ask_for_succ(gen_finger(bootstrap_node), self._numeric_id,
+                                                            ssl_ctx=self.client_ssl_ctx)
                 self._init_empty_fingers()
             else:
                 raise Exception("Attempting to join after joining before.")
@@ -77,15 +86,15 @@ class Node:
             if self._fingers[i]["numeric_id"] != -1:
                 if between(self._fingers[i]["numeric_id"], self._numeric_id, numeric_id, inclusive_left=False,
                            inclusive_right=False):
-                    logger.info(
-                        f"Using finger {i} => {self._fingers[i]} {numeric_id} is between ({self._fingers[i]['numeric_id']},{self._numeric_id}]")
+                    # logger.info(
+                    #     f"Using finger {i} => {self._fingers[i]} {numeric_id} is between ({self._fingers[i]['numeric_id']},{self._numeric_id}]")
                     return self._fingers[i]
         return self._successor
 
     def _find_successor(self, _numeric_id: int):
         is_bet = between(_numeric_id, self._numeric_id, self._successor["numeric_id"], inclusive_left=False,
                          inclusive_right=True)
-        logger.debug(f"Finding succ for: {_numeric_id} using node {self._numeric_id}: {is_bet}")
+        # logger.debug(f"Finding succ for: {_numeric_id} using node {self._numeric_id}: {is_bet}")
         if is_bet:
             return True, self._successor
         return False, self._closest_preceding_node(_numeric_id)
@@ -95,7 +104,7 @@ class Node:
         found, next_node = self._find_successor(numeric_id)
         i = 0
         while not found and i < self._MAX_STEPS:
-            found, next_node = await rpc_ask_for_succ(next_node, numeric_id)
+            found, next_node = await rpc_ask_for_succ(next_node, numeric_id, ssl_ctx=self.client_ssl_ctx)
             i += 1
         if found:
             return True, next_node
@@ -110,7 +119,7 @@ class Node:
         while True:
             await asyncio.sleep(_fix_interval)
             if self._predecessor:
-                res = await rpc_ping(self._predecessor["addr"])
+                res = await rpc_ping(self._predecessor["addr"], ssl_ctx=self.client_ssl_ctx)
                 if not res:
                     self._predecessor = None
 
@@ -129,7 +138,8 @@ class Node:
                 continue
             # logger.info("Stabilizing the network")
             try:
-                pred, succ_list = await rpc_ask_for_pred_and_succlist(self._successor["addr"])
+                pred, succ_list = await rpc_ask_for_pred_and_succlist(self._successor["addr"],
+                                                                      ssl_ctx=self.client_ssl_ctx)
                 if pred is not None:
                     if between(pred["numeric_id"], self._numeric_id, self._successor["numeric_id"],
                                inclusive_right=False,
@@ -137,7 +147,7 @@ class Node:
                         self._successor = pred.copy()
                         self._fingers[0] = self._successor
                 self._successors = [self._successor] + succ_list[:-1]
-                await rpc_notify(self._successor["addr"], self._addr)
+                await rpc_notify(self._successor["addr"], self._addr, ssl_ctx=self.client_ssl_ctx)
             except Exception as e:
                 logger.error(e)
                 logger.error("Succ is no longer working switch to next succ.")
@@ -163,7 +173,7 @@ class Node:
             self._next = (self._next + 1) % len(self._fingers)
             next_id = (self._numeric_id + (2 ** self._next)) % (2 ** len(self._fingers))
             found, succ = await self.find_successor(next_id)
-            # logger.info(f"Result for fixing finger {self._next} {next_id} => {found} {succ}")
+            logger.info(f"Result for fixing finger {self._next} {next_id} => {found} {succ}")
             if not found:
                 logger.warning("No suitable node found to fix this finger.")
             else:
@@ -171,10 +181,11 @@ class Node:
                     # logger.info(f"Finger {self._next} updated from {self._fingers[self._next]['addr']} to {succ}.")
                     self._fingers[self._next] = succ
                     # # TODO: optimization need to check for correctness
-                    # for i in range(self._next + 1, len(self._fingers)):
-                    #     __id = (self._numeric_id + (2 ** i)) % (2 ** len(self._fingers))
-                    #     if between(__id, self._numeric_id, succ["numeric_id"], inclusive_right=True):
-                    #         self._fingers[i] = succ
+                    for i in range(self._next + 1, len(self._fingers)):
+                        __id = (self._numeric_id + (2 ** i)) % (2 ** len(self._fingers))
+                        if between(__id, self._numeric_id, succ["numeric_id"], inclusive_right=False,
+                                   inclusive_left=False):
+                            self._fingers[i] = succ
                     # print(f"fixed {i} via {self._next}")
             # print_table(self._fingers)
 
@@ -198,7 +209,7 @@ class Node:
         if not found:
             return None
         logger.info(f"putting key {dht_key} on node {next_node['addr']}")
-        return await rpc_save_key(next_node, dht_key, value, ttl)
+        return await rpc_save_key(next_node, dht_key, value, ttl, ssl_ctx=self.client_ssl_ctx)
 
     @aiomas.expose
     async def find_key(self, key: str, ttl: int = 4):
@@ -215,7 +226,7 @@ class Node:
         if not found:
             return None
         logger.debug(f"Getting key from responsible node {node}")
-        return await rpc_get_key(node, key, ttl - 1)
+        return await rpc_get_key(node, key, ttl - 1, ssl_ctx=self.client_ssl_ctx)
 
     def _find_key(self, key: str):
         value = self._storage.get_key(key)
