@@ -27,11 +27,7 @@ def gen_finger(addr: str):
     """
     _id = generate_id(addr.encode("utf-8"))
     ring_sz = 2 ** (int(dht_config["finger_table_sz"]))
-    return {
-        "addr": addr,
-        "id": _id,
-        "numeric_id": int(_id, 16) % ring_sz
-    }
+    return {"addr": addr, "id": _id, "numeric_id": int(_id, 16) % ring_sz}
 
 
 def between(_id: int, left: int, right: int, inclusive_left=False, inclusive_right=True) -> bool:
@@ -59,19 +55,19 @@ def print_table(dict_arr, col_list=None):
     _list = [col_list]  # 1st row = header
     for item in dict_arr:
         if item is not None:
-            _list.append([str(item[col] or '') for col in col_list])
+            _list.append([str(item[col] or "") for col in col_list])
 
     # Maximum size of the col for each element
     col_sz = [max(map(len, col)) for col in zip(*_list)]
     # Insert Separating line before every line, and extra one for ending.
 
     for i in range(0, len(_list) + 1)[::-1]:
-        _list.insert(i, ['-' * i for i in col_sz])
+        _list.insert(i, ["-" * i for i in col_sz])
     # Two formats for each content line and each separating line
-    format_str = ' | '.join(["{{:<{}}}".format(i) for i in col_sz])
-    format_sep = '-+-'.join(["{{:<{}}}".format(i) for i in col_sz])
+    format_str = " | ".join(["{{:<{}}}".format(i) for i in col_sz])
+    format_sep = "-+-".join(["{{:<{}}}".format(i) for i in col_sz])
     for item in _list:
-        if item[0][0] == '-':
+        if item[0][0] == "-":
             print(format_sep.format(*item))
         else:
             print(format_str.format(*item))

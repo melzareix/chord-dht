@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "tum-p2p-dht"
 version = "1.0.0"
-description = ""
+description = "P2P Implementation of a DHT based on Chord"
 authors = ["Mohamed Elzarei", "Hady Yasser"]
 
 [tool.poetry.dependencies]
@@ -21,3 +21,6 @@ msgpack = "^1.0.0"
 black = "^19.10b0"
 pytest = "^5.4.3"
 flake8 = "^3.8.3"
+
+[tool.black]
+line-length = 110

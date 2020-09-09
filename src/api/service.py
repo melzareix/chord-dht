@@ -23,28 +23,20 @@ class ApiService:
 
         # check size match
         if sz != len(data):
-            logger.error(
-                f"Message Size mismatch. Payload Size {len(data)}, Expected Size {sz}"
-            )
+            logger.error(f"Message Size mismatch. Payload Size {len(data)}, Expected Size {sz}")
             return False
 
         msg_type = struct.unpack(">H", data[2:4])[0]
         logger.info(f"Got new message: {msg_type} => {DhtMessageCodes(msg_type)}")
         if msg_type == DhtMessageCodes.DHT_PUT.value:
-            return await self._process_put(data[4:])
+            await self._process_put(data[4:])
+            return
 
         if msg_type == DhtMessageCodes.DHT_GET.value:
             return await self._process_get(data[4:])
 
         logger.error(f"Invalid message Type. Got {msg_type}.")
         return False
-
-    # async def _process_get(self, data):
-    #     key = data.hex()
-    #     val = await self.chord_node.find_key(key)
-    #     if not val:
-    #         return self._create_fail(key)
-    #     return self._create_succ(key, val)
 
     async def _process_get(self, data: bytes):
         key = data
@@ -53,14 +45,16 @@ class ApiService:
             return self._create_fail(key)
         return self._create_succ(key, unhexlify(val))
 
-    async def _process_put(self, data: bytes):
+    @staticmethod
+    async def _process_put(data: bytes):
         ttl, replication, _ = struct.unpack(">HBB", data[:4])
+
         key = data[4:36].hex()
-        value = data[36:].hex()  # TODO:: error handling
-        # value = data[36:]  # TODO:: error handling
-        print(ttl, replication, key, len(key), value, len(value))
-        res = await self.chord_node.put_key(key, value, int(ttl))
-        return key
+        value = data[36:].hex()
+
+        logger.info(
+            f"Handling put message: Hex Key {key} [TTL {ttl}, replication {replication}] => Hex Value [{value}]"
+        )
 
     @staticmethod
     def _create_fail(key):
@@ -70,8 +64,4 @@ class ApiService:
     @staticmethod
     def _create_succ(key, value):
         length = len(value) + len(key) + 32
-        return (
-            struct.pack(">HH", length, DhtMessageCodes.DHT_SUCC.value)
-            + key
-            + value
-        )
+        return struct.pack(">HH", length, DhtMessageCodes.DHT_SUCC.value) + key + value

@@ -11,17 +11,12 @@ from chord.helpers import between
 
 
 class Storage:
-
     def make_digest(self, message: bytes) -> str:
         secret_key = os.environ.get("SEC_KEY", self.node_id)
-        return hmac.new(
-            secret_key.encode("utf-8"),
-            message,
-            hashlib.sha256,
-        ).hexdigest()
+        return hmac.new(secret_key.encode("utf-8"), message, hashlib.sha256,).hexdigest()
 
     def __init__(self, node_id: str):
-        self._store = Cache('./chord_data')
+        self._store = Cache("./chord_data")
         self.node_id = node_id
 
     def get_key(self, key: str):
@@ -71,7 +66,8 @@ class Storage:
         logger.debug(list(self._store.iterkeys()))
         for key in self._store.iterkeys():
             logger.warning(
-                f"{key} - ({left}, {right}) => {between(int(key, 16), left, right, inclusive_left=False, inclusive_right=False)}")
+                f"{key} - ({left}, {right}) => {between(int(key, 16), left, right, inclusive_left=False, inclusive_right=False)}"
+            )
             if between(int(key, 16), left, right, inclusive_left=False, inclusive_right=False):
                 val = self.get_key(key)
                 print(val)

@@ -20,6 +20,7 @@ class ApiController(asyncio.Protocol):
             return self.close_connection()
         if isinstance(result, str):
             result = result.encode("utf-8")
+
         self.transport.write(result)
 
     def data_received(self, data):

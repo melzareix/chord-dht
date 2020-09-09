@@ -45,16 +45,15 @@ async def _start(args: argparse.Namespace):
         await chord_node.join(bootstrap_node=None)
 
     # TLS
-    certs_dir = os.path.join(os.path.dirname(__file__), './tls/node')
-    server_ctx = aiomas.util.make_ssl_server_context(cafile=os.path.join(certs_dir, 'ca.pem'),
-                                                     certfile=os.path.join(certs_dir, 'node.pem'),
-                                                     keyfile=os.path.join(certs_dir, 'node.key'))
-
-    chord_rpc_server = await aiomas.rpc.start_server(
-        (dht_host, dht_port),
-        chord_node,
-        ssl=server_ctx
+    certs_dir = os.path.join(os.path.dirname(__file__), "./tls/node")
+    server_ctx = aiomas.util.make_ssl_server_context(
+        cafile=os.path.join(certs_dir, "ca.pem"),
+        certfile=os.path.join(certs_dir, "node.pem"),
+        keyfile=os.path.join(certs_dir, "node.key"),
     )
+
+    chord_rpc_server = await aiomas.rpc.start_server((dht_host, dht_port), chord_node, ssl=server_ctx)
+
     logger.info(f"Chord RPC Server start at: {dht_host}:{dht_port}")
 
     if args.start_api:
@@ -66,22 +65,32 @@ async def _start(args: argparse.Namespace):
         api_port = int(api_address.split(":")[1])
         api_server = await _start_api_server(api_host, str(api_port), chord_node)
         async with api_server, chord_rpc_server:
-            await asyncio.gather(api_server.serve_forever(), loop.run_until_complete(chord_rpc_server.wait_closed()),
-                                 loop.run_until_complete(stabilize_task), loop.run_until_complete(fix_fingers_task),
-                                 loop.run_until_complete(check_pred_task))
+            await asyncio.gather(
+                api_server.serve_forever(),
+                loop.run_until_complete(chord_rpc_server.wait_closed()),
+                loop.run_until_complete(stabilize_task),
+                loop.run_until_complete(fix_fingers_task),
+                loop.run_until_complete(check_pred_task),
+            )
     else:
         async with chord_rpc_server:
-            await asyncio.gather(loop.run_until_complete(chord_rpc_server.wait_closed()),
-                                 loop.run_until_complete(stabilize_task), loop.run_until_complete(fix_fingers_task),
-                                 loop.run_until_complete(check_pred_task))
+            await asyncio.gather(
+                loop.run_until_complete(chord_rpc_server.wait_closed()),
+                loop.run_until_complete(stabilize_task),
+                loop.run_until_complete(fix_fingers_task),
+                loop.run_until_complete(check_pred_task),
+            )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--start-api", help="If not present won't start an API server.", action="store_true",
-                        default=False)
+    parser.add_argument(
+        "--start-api", help="If not present won't start an API server.", action="store_true", default=False,
+    )
     parser.add_argument("--dht-address", help="Address to run the DHT Node on")
     parser.add_argument("--api-address", help="Address to run the DHT Node on", default=None)
-    parser.add_argument("--bootstrap-node", help="Start a new Chord Ring if argument no present", default=None)
+    parser.add_argument(
+        "--bootstrap-node", help="Start a new Chord Ring if argument no present", default=None,
+    )
     arguments = parser.parse_args()
     asyncio.run(_start(arguments))

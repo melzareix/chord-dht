@@ -11,7 +11,10 @@ from chord.helpers import gen_finger
 # RPC Procedures
 ######################
 
-async def rpc_ask_for_succ(next_node: dict, numeric_id: int, ssl_ctx: ssl.SSLContext) -> (bool, Optional[dict]):
+
+async def rpc_ask_for_succ(
+    next_node: dict, numeric_id: int, ssl_ctx: ssl.SSLContext
+) -> (bool, Optional[dict]):
     try:
         host, port = next_node["addr"].split(":")
         rpc_con = await aiomas.rpc.open_connection((host, port), ssl=ssl_ctx)
@@ -67,7 +70,9 @@ async def rpc_get_key(next_node: dict, key: str, ttl: int, ssl_ctx: ssl.SSLConte
         return None
 
 
-async def rpc_save_key(next_node: dict, key: str, value: str, ttl: int, ssl_ctx: ssl.SSLContext) -> Optional[str]:
+async def rpc_save_key(
+    next_node: dict, key: str, value: str, ttl: int, ssl_ctx: ssl.SSLContext
+) -> Optional[str]:
     try:
         host, port = next_node["addr"].split(":")
         rpc_con = await aiomas.rpc.open_connection((host, port), ssl=ssl_ctx)

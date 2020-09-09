@@ -1,0 +1,14 @@
+[flake8]
+ignore = D203, E501, W503, E203, F403, F405
+exclude =
+    # No need to traverse our git directory
+    .git,
+    # There's no value in checking cache directories
+    __pycache__,
+    # This contains our cloudformation templates and outputs
+    cdk.out
+max-complexity = 10
+statistics = True
+
+# Today we have larger monitors..
+max-line-length = 120
