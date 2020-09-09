@@ -89,3 +89,15 @@ async def rpc_put_key(next_node: dict, key: str, value: str, ssl_ctx: ssl.SSLCon
     except Exception as e:
         logger.error(e)
         return None
+
+
+async def rpc_get_all_keys(next_node: dict, node_id: int, ssl_ctx: ssl.SSLContext):
+    try:
+        host, port = next_node["addr"].split(":")
+        rpc_con = await aiomas.rpc.open_connection((host, port), ssl=ssl_ctx)
+        rep = await rpc_con.remote.get_all(node_id)
+        await rpc_con.close()
+        return rep
+    except Exception as e:
+        logger.error(e)
+        return None

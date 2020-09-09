@@ -2,9 +2,12 @@ import hashlib
 import hmac
 import os
 from binascii import unhexlify
+from typing import List
 
 from diskcache import Cache
 from loguru import logger
+
+from chord.helpers import between
 
 
 class Storage:
@@ -43,3 +46,42 @@ class Storage:
         except Exception as e:
             logger.error(e)
             return False
+
+    def _del_key(self, key):
+        return self._store.delete(key)
+
+    def del_keys(self, keys: List[str]):
+        for key in keys:
+            self._del_key(key)
+
+    def get_my_data(self):
+        keys = []
+        values = []
+        for key in self._store.iterkeys():
+            val = self.get_key(key)
+            if val:
+                keys.append(key)
+                values.append(val)
+        return keys, values
+
+    def get_keys(self, left: int, right: int):
+        # left new node, right me
+        keys = []
+        values = []
+        logger.debug(list(self._store.iterkeys()))
+        for key in self._store.iterkeys():
+            logger.warning(
+                f"{key} - ({left}, {right}) => {between(int(key, 16), left, right, inclusive_left=False, inclusive_right=False)}")
+            if between(int(key, 16), left, right, inclusive_left=False, inclusive_right=False):
+                val = self.get_key(key)
+                print(val)
+                if val:
+                    keys.append(key)
+                    values.append(val)
+
+        logger.debug(f"Got {keys} => {values}")
+        return keys, values
+
+    def put_keys(self, keys, values):
+        for idx, key in enumerate(keys):
+            self.put_key(key, values[idx])

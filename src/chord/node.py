@@ -37,8 +37,8 @@ class Node:
                                                                   certfile=os.path.join(certs_dir, 'node.pem'),
                                                                   keyfile=os.path.join(certs_dir, 'node.key'))
         self.client_ssl_ctx.check_hostname = False
-        ##################################
 
+    ##################################
     # Node Initialization(s)
     ##################################
 
@@ -68,6 +68,11 @@ class Node:
                 _, self._successor = await rpc_ask_for_succ(gen_finger(bootstrap_node), self._numeric_id,
                                                             ssl_ctx=self.client_ssl_ctx)
                 self._init_empty_fingers()
+                # get keys from succ
+                keys, values = await rpc_get_all_keys(next_node=self._successor,
+                                                      node_id=self._numeric_id,
+                                                      ssl_ctx=self.client_ssl_ctx)
+                self._storage.put_keys(keys, values)
             else:
                 raise Exception("Attempting to join after joining before.")
 
@@ -240,6 +245,16 @@ class Node:
     @aiomas.expose
     def ping():
         return "pong"
+
+    @aiomas.expose
+    def get_all(self, node_id: int):
+        if not self._predecessor or not between(node_id, self._predecessor["numeric_id"], self._numeric_id,
+                                                inclusive_right=False, inclusive_left=False):
+            return [], []
+
+        keys, values = self._storage.get_keys(self._predecessor["numeric_id"], node_id)
+        self._storage.del_keys(keys)
+        return keys, values
 
     def dump_me(self):
         logger.debug("My data, succ and pred")
