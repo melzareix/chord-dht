@@ -20,6 +20,9 @@ async def _start_api_server(host: str, port: str, chord_node: Node):
 
 
 async def _start_chord_node(args):
+    """
+    Start Chord Node
+    """
     if args.dht_address:
         dht_address = args.dht_address
     else:
@@ -44,8 +47,10 @@ async def _start(args: argparse.Namespace):
     else:
         await chord_node.join(bootstrap_node=None)
 
-    # TLS
-    certs_dir = os.path.join(os.path.dirname(__file__), "./tls/node")
+    # SSL
+    tls_dir = os.environ.get("TLS_DIR", "node_1")
+    certs_dir = os.path.join(os.path.dirname(__file__), f"./tls/{tls_dir}")
+    print(certs_dir)
     server_ctx = aiomas.util.make_ssl_server_context(
         cafile=os.path.join(certs_dir, "ca.pem"),
         certfile=os.path.join(certs_dir, "node.pem"),
@@ -67,7 +72,7 @@ async def _start(args: argparse.Namespace):
         async with api_server, chord_rpc_server:
             await asyncio.gather(
                 api_server.serve_forever(),
-                loop.run_until_complete(chord_rpc_server.wait_closed()),
+                loop.run_until_complete(chord_rpc_server.serve_forever()),
                 loop.run_until_complete(stabilize_task),
                 loop.run_until_complete(fix_fingers_task),
                 loop.run_until_complete(check_pred_task),
@@ -75,7 +80,7 @@ async def _start(args: argparse.Namespace):
     else:
         async with chord_rpc_server:
             await asyncio.gather(
-                loop.run_until_complete(chord_rpc_server.wait_closed()),
+                loop.run_until_complete(chord_rpc_server.serve_forever()),
                 loop.run_until_complete(stabilize_task),
                 loop.run_until_complete(fix_fingers_task),
                 loop.run_until_complete(check_pred_task),

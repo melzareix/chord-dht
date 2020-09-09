@@ -45,8 +45,7 @@ class ApiService:
             return self._create_fail(key)
         return self._create_succ(key, unhexlify(val))
 
-    @staticmethod
-    async def _process_put(data: bytes):
+    async def _process_put(self, data: bytes):
         ttl, replication, _ = struct.unpack(">HBB", data[:4])
 
         key = data[4:36].hex()
@@ -55,6 +54,7 @@ class ApiService:
         logger.info(
             f"Handling put message: Hex Key {key} [TTL {ttl}, replication {replication}] => Hex Value [{value}]"
         )
+        await self.chord_node.put_key(key, value, int(ttl))
 
     @staticmethod
     def _create_fail(key):

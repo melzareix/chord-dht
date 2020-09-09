@@ -8,6 +8,10 @@ from config.config import dht_config
 
 
 class Node:
+    """
+    Hello World
+    """
+
     router = aiomas.rpc.Service()
 
     def __init__(self, host: str, port: str):
@@ -33,8 +37,11 @@ class Node:
         self._successors = [None for _ in range(self._MAX_SUCC)]
         self._next = 0
 
+        tls_dir = os.environ.get("TLS_DIR", "node_1")
+
         # SSL
-        certs_dir = os.path.join(os.path.dirname(__file__), "../tls/node")
+        certs_dir = os.path.join(os.path.dirname(__file__), f"../tls/{tls_dir}")
+        logger.debug(certs_dir)
         self.client_ssl_ctx = aiomas.util.make_ssl_client_context(
             cafile=os.path.join(certs_dir, "ca.pem"),
             certfile=os.path.join(certs_dir, "node.pem"),

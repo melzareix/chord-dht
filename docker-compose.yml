@@ -1,0 +1,42 @@
+version: "3"
+services:
+  bootstrap:
+    build:
+      context: .
+    command: "sh -c 'python3 -u src/main.py --start-api --dht-address bootstrap:6501'"
+    environment:
+      - TLS_DIR=bootstrap
+    volumes:
+    - ./:/app
+    ports:
+      - 36979:36979
+  node_1:
+    build:
+      context: .
+    command: "sh -c 'python3 -u src/main.py --bootstrap-node bootstrap:6501 --dht-address node_1:6501'"
+    environment:
+      - TLS_DIR=node_1
+    volumes:
+      - ./:/app
+    depends_on:
+      - bootstrap
+  node_2:
+    build:
+      context: .
+    command: "sh -c 'python3 -u src/main.py --bootstrap-node bootstrap:6501 --dht-address node_2:6501'"
+    environment:
+      - TLS_DIR=node_2
+    volumes:
+      - ./:/app
+    depends_on:
+      - bootstrap
+  node_3:
+    build:
+      context: .
+    command: "sh -c 'python3 -u src/main.py --bootstrap-node bootstrap:6501 --dht-address node_3:6501'"
+    environment:
+      - TLS_DIR=node_3
+    volumes:
+      - ./:/app
+    depends_on:
+      - bootstrap

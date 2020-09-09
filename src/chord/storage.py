@@ -60,17 +60,15 @@ class Storage:
         return keys, values
 
     def get_keys(self, left: int, right: int):
-        # left new node, right me
         keys = []
         values = []
         logger.debug(list(self._store.iterkeys()))
         for key in self._store.iterkeys():
-            logger.warning(
+            logger.debug(
                 f"{key} - ({left}, {right}) => {between(int(key, 16), left, right, inclusive_left=False, inclusive_right=False)}"
             )
             if between(int(key, 16), left, right, inclusive_left=False, inclusive_right=False):
                 val = self.get_key(key)
-                print(val)
                 if val:
                     keys.append(key)
                     values.append(val)
