@@ -23,6 +23,7 @@ class Node:
 
         self._MAX_STEPS = int(dht_config["max_steps"])
         self._MAX_SUCC = int(dht_config["max_succ"])
+        self._REPLICATION_COUNT = 3
 
         self._fingers = [
             {"addr": "", "id": "", "numeric_id": -1} for _ in range(int(dht_config["finger_table_sz"]))
@@ -239,31 +240,39 @@ class Node:
 
     @aiomas.expose
     async def put_key(self, key: str, value: str, ttl: int):
-        dht_key = generate_id(key)
-        numeric_id = int(dht_key, 16)
-        logger.warning(f"Putting Key: {key} - {dht_key} - {numeric_id}")
-        found, next_node = await self.find_successor(numeric_id)
-        if not found:
-            return None
-        logger.info(f"putting key {dht_key} on node {next_node['addr']}")
-        return await rpc_save_key(next_node, dht_key, value, ttl, ssl_ctx=self.client_ssl_ctx)
+        # generate multiple dht keys for each each
+        for replica in range(1 + self._REPLICATION_COUNT):
+            dht_key = generate_id(key)
+            numeric_id = int(dht_key, 16)
+            logger.warning(f"Putting Key: {key} - {dht_key} - {numeric_id}")
+            found, next_node = await self.find_successor(numeric_id)
+            if not found:
+                return None
+            logger.info(f"putting key {dht_key} on node {next_node['addr']}")
+            await rpc_save_key(next_node, dht_key, value, ttl, ssl_ctx=self.client_ssl_ctx)
+            key = dht_key
 
     @aiomas.expose
-    async def find_key(self, key: str, ttl: int = 4):
+    async def find_key(self, key: str, ttl: int = 4, is_replica: bool = False):
         logger.debug(f"Finding key with TTL => {ttl} {key}")
         if ttl <= 0:
             return None
-        dht_key = generate_id(key)
-        numeric_id = int(dht_key, 16)
-        logger.warning(f"Getting Key: {key} - {dht_key} - {numeric_id}")
-        found, value = self._find_key(dht_key)
-        if found:
-            return value
-        found, node = await self.find_successor(numeric_id)
-        if not found:
-            return None
-        logger.debug(f"Getting key from responsible node {node}")
-        return await rpc_get_key(node, key, ttl - 1, ssl_ctx=self.client_ssl_ctx)
+        search_cnt = 1 if is_replica else self._REPLICATION_COUNT + 1
+        for idx in range(search_cnt):
+            dht_key = generate_id(key)
+            numeric_id = int(dht_key, 16)
+            logger.warning(f"Getting Key: {key} - {dht_key} - {numeric_id}")
+            found, value = self._find_key(dht_key)
+            if found:
+                return value
+            found, node = await self.find_successor(numeric_id)
+            if not found:
+                continue
+            logger.debug(f"Getting key from responsible node {node}")
+            res = await rpc_get_key(node, key, ttl - 1, is_replica=idx > 0, ssl_ctx=self.client_ssl_ctx)
+            if res:
+                return res
+            key = dht_key
 
     def _find_key(self, key: str):
         value = self._storage.get_key(key)

@@ -56,11 +56,13 @@ async def rpc_notify(succ_addr: str, my_addr: str, ssl_ctx: ssl.SSLContext) -> N
         logger.debug(e)
 
 
-async def rpc_get_key(next_node: dict, key: str, ttl: int, ssl_ctx: ssl.SSLContext) -> Optional[str]:
+async def rpc_get_key(
+    next_node: dict, key: str, ttl: int, is_replica: bool, ssl_ctx: ssl.SSLContext
+) -> Optional[str]:
     try:
         host, port = next_node["addr"].split(":")
         rpc_con = await aiomas.rpc.open_connection((host, port), ssl=ssl_ctx)
-        rep = await rpc_con.remote.find_key(key, ttl)
+        rep = await rpc_con.remote.find_key(key, ttl, is_replica=is_replica)
         logger.info("response from node =>", rep)
         await rpc_con.close()
         return rep
