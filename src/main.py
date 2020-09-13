@@ -69,7 +69,7 @@ async def _start(args: argparse.Namespace):
         api_port = int(api_address.split(":")[1])
         api_server = await _start_api_server(api_host, str(api_port), chord_node)
         async with api_server, chord_rpc_server:
-            await asyncio.gather(
+            return await asyncio.gather(
                 api_server.serve_forever(),
                 loop.run_until_complete(chord_rpc_server.serve_forever()),
                 loop.run_until_complete(stabilize_task),
@@ -78,7 +78,7 @@ async def _start(args: argparse.Namespace):
             )
     else:
         async with chord_rpc_server:
-            await asyncio.gather(
+            return await asyncio.gather(
                 loop.run_until_complete(chord_rpc_server.serve_forever()),
                 loop.run_until_complete(stabilize_task),
                 loop.run_until_complete(fix_fingers_task),

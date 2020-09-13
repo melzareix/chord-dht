@@ -16,12 +16,17 @@ class ApiController(asyncio.Protocol):
     async def process_data(self, data):
         result = await self.service.process_message(data)
         logger.debug(f"API Result: {result}")
+
         if not result:
             return self.close_connection()
+
         if isinstance(result, str):
             result = result.encode("utf-8")
 
-        self.transport.write(result)
+        if self.transport:
+            self.transport.write(result)
+
+        return result
 
     def data_received(self, data):
         asyncio.ensure_future(self.process_data(data))

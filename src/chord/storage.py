@@ -7,7 +7,7 @@ from typing import List
 from diskcache import Cache
 from loguru import logger
 
-from chord.helpers import between, generate_id
+from chord.helpers import between
 
 
 class Storage:

@@ -8,10 +8,6 @@ from config.config import dht_config
 
 
 class Node:
-    """
-    Hello World
-    """
-
     router = aiomas.rpc.Service()
 
     def __init__(self, host: str, port: str):
@@ -301,16 +297,21 @@ class Node:
             ttl (int): time to live. How long this should remain in the network.
         """
         # generate multiple dht keys for each each
+        keys = []
         for replica in range(1 + self._REPLICATION_COUNT):
             dht_key = generate_id(key)
             numeric_id = int(dht_key, 16)
             logger.warning(f"Putting Key: {key} - {dht_key} - {numeric_id}")
             found, next_node = await self.find_successor(numeric_id)
             if not found:
-                return None
+                continue
             logger.info(f"putting key {dht_key} on node {next_node['addr']}")
-            await rpc_save_key(next_node, dht_key, value, ttl, ssl_ctx=self.client_ssl_ctx)
+            await rpc_save_key(
+                next_node=next_node, key=dht_key, value=value, ttl=ttl, ssl_ctx=self.client_ssl_ctx
+            )
+            keys.append(key)
             key = dht_key
+        return keys
 
     @aiomas.expose
     async def find_key(self, key: str, ttl: int = 4, is_replica: bool = False):
@@ -341,7 +342,9 @@ class Node:
             if not found:
                 continue
             logger.debug(f"Getting key from responsible node {node}")
-            res = await rpc_get_key(node, key, ttl - 1, is_replica=idx > 0, ssl_ctx=self.client_ssl_ctx)
+            res = await rpc_get_key(
+                next_node=node, key=key, ttl=ttl - 1, is_replica=idx > 0, ssl_ctx=self.client_ssl_ctx
+            )
             if res:
                 return res
             key = dht_key
@@ -409,3 +412,7 @@ class Node:
 
         logger.debug("My Fingers")
         print_table(self._fingers)
+
+    @staticmethod
+    def completed():
+        return "completed"
