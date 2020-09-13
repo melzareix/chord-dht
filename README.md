@@ -1,8 +1,8 @@
 # TUM P2P Dht
+An an implementation of DHT based on Chord Paper written in Python 3.8 as part of P2P Systeme und Sicherheit (IN2194) course at TU Munich.
 
-## TLS
+
+### TLS
 https://aiomas.readthedocs.io/en/latest/guides/tls.html
-- Root CA
-    1. Passphrase: `tum-p2p`
 
-- Replication => Always 3 nodes for replication regardless of the dht mode.
+Passphrase for sample Root CA: `tum-p2p`.
