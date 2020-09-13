@@ -295,6 +295,8 @@ class Node:
             key (string): The key under which a vlue shall be stored.
             value (string): The value / data being stored.
             ttl (int): time to live. How long this should remain in the network.
+        Returns:
+            keys (list): The update list of keys.
         """
         # generate multiple dht keys for each each
         keys = []
