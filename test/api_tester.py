@@ -11,6 +11,7 @@ def test_api_get_key():
     print("Result:", res)
     s.close()
 
+
 def test_api_put_key(val):
     s = socket.socket()
     s.connect(("127.0.0.1", 36979))

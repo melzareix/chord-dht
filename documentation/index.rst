@@ -16,7 +16,39 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
+API
+########
 
-mod
+Controller
+**********************
+.. automodule:: api.controller
+    :members:
+
+Service
+**********************
+.. automodule:: api.servicexp
+    :members:
+
+Node
+########
+
 .. automodule:: chord.node
+    :members:
+
+RPC
+**********************
+
+.. automodule:: chord.rpc
+    :members:
+
+Storage
+**********************
+
+.. automodule:: chord.storage
+    :members:
+
+Helpers
+**********************
+
+.. automodule:: chord.helpers
     :members:

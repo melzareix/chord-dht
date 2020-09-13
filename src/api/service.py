@@ -18,6 +18,7 @@ class ApiService:
     """
     This class represents the API service.
     """
+
     def __init__(self, chord_node: Node):
         self.chord_node = chord_node
 

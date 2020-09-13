@@ -8,6 +8,10 @@ from config.config import dht_config
 
 
 class Node:
+    """
+    Class Responsible for Managing a Chord DHT Node.
+    """
+
     router = aiomas.rpc.Service()
 
     def __init__(self, host: str, port: str):

@@ -16,6 +16,7 @@ class Storage:
     For secuirty purposes.
     successor about the current node.
     """
+
     def make_digest(self, message: bytes) -> str:
         secret_key = os.environ.get("SEC_KEY", self.node_id)
         return hmac.new(secret_key.encode("utf-8"), message, hashlib.sha256,).hexdigest()

@@ -9,6 +9,7 @@ class ApiController(asyncio.Protocol):
     """
     This class represent the API controller (The entry class).
     """
+
     def __init__(self, chord_node):
         self.transport = None
         self.service = ApiService(chord_node)
