@@ -100,7 +100,7 @@ async def rpc_get_key(
         next_node (dict): the next node.
         key (string): The key under which a vlue shall be stored.
         value (string): The value / data being stored.
-        ttl (int): time to live. How long this should remain in the network.
+        ttl (int): Time to live for the message, after that the message is discared and no value is returned for that key.
         is_replica (Boolean): Whether or not the current node is a replica.
         ssl_ctx (ssl.SSLContext): Used for tls.
     Returns:
