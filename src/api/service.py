@@ -58,10 +58,11 @@ class ApiService:
 
     @staticmethod
     def _create_fail(key):
-        length = len(key) + 12
+        print("kk", len(key))
+        length = len(key) + 4
         return struct.pack(">HH", length, DhtMessageCodes.DHT_FAIL.value) + key
 
     @staticmethod
     def _create_succ(key, value):
-        length = len(value) + len(key) + 32
+        length = len(value) + len(key) + 4
         return struct.pack(">HH", length, DhtMessageCodes.DHT_SUCC.value) + key + value

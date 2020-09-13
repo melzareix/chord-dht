@@ -7,7 +7,7 @@ from typing import List
 from diskcache import Cache
 from loguru import logger
 
-from chord.helpers import between, generate_id
+from chord.helpers import between
 
 
 class Storage:
@@ -79,11 +79,3 @@ class Storage:
     def put_keys(self, keys, values):
         for idx, key in enumerate(keys):
             self.put_key(key, values[idx])
-
-    def gen_keys(self, key: str, replicas: int) -> List[str]:
-        new_key = key
-        keys = []
-        for i in range(replicas):
-            new_key = generate_id(key)
-            keys.append(new_key)
-        return keys

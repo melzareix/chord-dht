@@ -119,3 +119,4 @@ dmypy.json
 .idea
 chord_data
 documentation/*/
+htmlcov
