@@ -96,6 +96,13 @@ class Node:
     ##################################
 
     def _closest_preceding_node(self, numeric_id: int):
+        """Find the closest preceding node.
+          Args:
+              numeric_id (int): The numeric id of the node.
+
+          Returns:
+              node (dict): the closest preceding node.
+        """
         for i in range(len(self._fingers) - 1, -1, -1):
             if self._fingers[i]["numeric_id"] != -1:
                 if between(
@@ -111,6 +118,17 @@ class Node:
         return self._successor
 
     def _find_successor(self, _numeric_id: int):
+        """
+        Find the successor for a given node id if it is within the interval of the
+        node itself and its successor. If successor is not in range,
+        checks the finger table.
+          Args:
+              numeric_id (int): The numeric id of the node.
+
+          Returns:
+              found (bool): Whether or not a successor exists.
+              successor (dict): The successor if it exists.
+        """
         is_bet = between(
             _numeric_id,
             self._numeric_id,
@@ -125,6 +143,15 @@ class Node:
 
     @aiomas.expose
     async def find_successor(self, numeric_id: int):
+        """
+        Find the successor for a given node id.
+          Args:
+              numeric_id (int): The numeric id of the node.
+
+          Returns:
+              found (bool): Whether or not a successor exist.
+              successor (dict): The successor if it exists.
+        """
         found, next_node = self._find_successor(numeric_id)
         i = 0
         while not found and i < self._MAX_STEPS:
@@ -149,9 +176,18 @@ class Node:
 
     @aiomas.expose
     def get_pred_and_succlist(self):
+        """Gets the predecessor and successor list of the current node.
+          Returns
+              dict: predecessor
+              array: The list of successors
+        """
         return self._predecessor, self._successors
 
     async def stabilize(self):
+        """
+        Called periodically. verifies current node’s successor, and tells the
+        successor about the current node.
+        """
         # if succ not yet set don't run stabilize
         _fix_interval = int(dht_config["fix_interval"])
         print_interval = 60
@@ -196,6 +232,9 @@ class Node:
             # logger.info(f"Sleeping for {SECS_TO_WAIT} secs before stabilizing again")
 
     async def fix_fingers(self):
+        """
+        Updates finger table to fix entries in case of change.
+        """
         _fix_interval = int(dht_config["fix_interval"])
         while True:
             await asyncio.sleep(_fix_interval)
@@ -224,6 +263,11 @@ class Node:
 
     @aiomas.expose
     def notify(self, n):
+        """
+        Notifies nodes which node n is now a predecessor of.
+        Args:
+            n (dict): The node notidying other nodes that it is their predecessor.
+        """
         if not self._predecessor or between(
             n["numeric_id"],
             self._predecessor["numeric_id"],
@@ -235,11 +279,27 @@ class Node:
 
     @aiomas.expose
     def save_key(self, key: str, value: str, ttl: int):
+        """
+        Stores key, val pair in the actual storage.
+        Args:
+            key (string): The key under which a vlue shall be stored.
+            value (string): The value / data being stored.
+            ttl (int): time to live. How long this should remain in the network.
+        """
         logger.info(f"Saving key {key} => {value} in my storage.")
         return self._storage.put_key(key, value, ttl=ttl)
 
     @aiomas.expose
     async def put_key(self, key: str, value: str, ttl: int):
+        """
+        Generates multiple dht keys for each value for replication.
+        Finds the node based on the key, where the value should be stored.
+        Save it using save_key after a detination node is chosen.
+        Args:
+            key (string): The key under which a vlue shall be stored.
+            value (string): The value / data being stored.
+            ttl (int): time to live. How long this should remain in the network.
+        """
         # generate multiple dht keys for each each
         for replica in range(1 + self._REPLICATION_COUNT):
             dht_key = generate_id(key)
@@ -254,6 +314,18 @@ class Node:
 
     @aiomas.expose
     async def find_key(self, key: str, ttl: int = 4, is_replica: bool = False):
+        """
+        checks current node for the value or deligates to appropriate succsorsself.
+        Returns the value if it is stored on the ring.
+        Args:
+            key (string): The key under which a vlue shall be stored.
+            value (string): The value / data being stored.
+            ttl (int): time to live. How long this should remain in the network.
+            is_replica (Boolean): Whether or not the current node is a replica.
+        Returns:
+            Boolean: Whether or not the value is found
+            String: Value if one is found.
+        """
         logger.debug(f"Finding key with TTL => {ttl} {key}")
         if ttl <= 0:
             return None
@@ -275,6 +347,14 @@ class Node:
             key = dht_key
 
     def _find_key(self, key: str):
+        """
+        A 'helper' function that returns the value if the key is store in the current node.
+        Args:
+            key (string): The key for whic the value is to be retrieved.
+        Returns:
+            Boolean: Whether or not the value is found
+            String: Value if one is found.
+        """
         value = self._storage.get_key(key)
         logger.info(f"finding key {key} => {value}")
         if value is not None:
@@ -289,6 +369,14 @@ class Node:
 
     @aiomas.expose
     def get_all(self, node_id: int):
+        """
+        Gets all key, value pairs of the node with the given node_id
+        Args:
+            node_id (int): The id of the node.
+        Returns:
+            keys (list): The keys on the node as a list of strings
+            values (list): Valus stored on the node as a list of string.
+        """
         if not self._predecessor or not between(
             node_id,
             self._predecessor["numeric_id"],
@@ -303,6 +391,13 @@ class Node:
         return keys, values
 
     def dump_me(self):
+        """
+        Used for debugging. prints a dump of all relevant node information.
+        Prints the following for a node:
+            *  my_data: node's `_addr`, `numeric_id`, `successor` and `predecessor`
+            *  _successors: The successors of the current node.
+            * _fingers: The finger table.
+        """
         logger.debug("My data, succ and pred")
         my_data = [{"addr": self._addr, "id": self._id, "numeric_id": self._numeric_id}]
         my_data += [self._successor]
